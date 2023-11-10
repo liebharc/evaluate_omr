@@ -135,8 +135,6 @@ def chord_node_to_string(chord):
     return 'Note {}'.format(pitch.text) if pitch is not None else 'Note'
 
 def get_key_and_notes_from_musicxml(filename):
-    if filename is None:
-        return []
     tree = ET.parse(filename)
     root = tree.getroot()
     staffs = root.findall('./Score/Staff')
@@ -176,13 +174,23 @@ def run_omr(filename: str) -> str:
     """
     Runs OMR on the given file and returns the result: Replace it with the OMR system you want to evaluate.
     """
-    return None   
+    if os.system("oemer --use-tf " + filename) != 0:
+        print("Error running OMR on " + filename)
+        return None
+    return filename.replace('.png', '.musicxml')
 
 if __name__ == '__main__':
     download_references()    
     image_files = prepare_folder('Lieder/scores/Barnby,_Joseph/')
+    sum_of_diffs = 0
+    # Also count complete failures where we didn't get a result
+    sum_of_failures = 0 
     for image_file in image_files:
         print('Running OMR on {}'.format(image_file))
         reference = image_file.replace('-1.png', '.mscx')
         result = run_omr(image_file)
-        compare_result(result, reference)
+        if result is None:
+            print('Error running OMR on {}'.format(image_file))
+            sum_of_failures += 1
+            continue
+        sum_of_diffs += compare_result(result, reference)
